@@ -1,0 +1,18 @@
+[package]
+name = "heli_os"
+version = "0.1.0"
+authors = ["Domenico Marino"]
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+rlibc = "1.0.0"
+volatile = "0.1.0"
+spin = "0.4.5"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
