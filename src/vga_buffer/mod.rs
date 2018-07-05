@@ -1,10 +1,10 @@
 // VGA buffer module definition
-
 use core::ptr::Unique;
 use core::fmt;
 
 use spin::Mutex;
 use volatile::Volatile;
+
 
 macro_rules! print {
     ($($arg:tt)*) => ({
@@ -95,7 +95,7 @@ impl Writer {
     }
 
     fn buffer(&mut self) -> &mut Buffer {
-        unsafe { self.buffer.get_mut() }
+        unsafe { self.buffer.as_mut() }
     }
 
     fn new_line(&mut self) {
@@ -146,12 +146,11 @@ impl fmt::Write for Writer {
         Ok(())
     }
 }
-
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     column_position: 0,
     row_position: 0,
     color_code: ColorCode::new(Color::LightGreen, Color::Black),
-    buffer: unsafe { Unique::new(0xb8000 as *mut _) },
+    buffer: unsafe { Unique::new_unchecked(0xb8000 as *mut _) },
 });
 
 pub fn clear_screen() {

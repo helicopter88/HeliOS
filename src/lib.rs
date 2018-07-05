@@ -1,4 +1,8 @@
 #![feature(lang_items)]
+#![feature(panic_implementation)]
+#![feature(core_intrinsics)]
+#![feature(ptr_internals)]
+
 /* Disable stdlib */
 #![no_std]
 #![feature(unique)]
@@ -6,6 +10,8 @@
 extern crate rlibc;
 extern crate volatile;
 extern crate spin;
+use core::intrinsics;
+use core::panic::PanicInfo;
 #[macro_use]
 mod vga_buffer;
 
@@ -24,11 +30,12 @@ pub extern "C" fn rust_main() {
 pub extern "C" fn _Unwind_Resume() -> ! {
     loop {}
 }
-
+#[no_mangle]
+pub extern "C" fn rust_begin_unwind() { }
 #[lang = "eh_personality"]
 extern "C" fn eh_personality() {}
-#[lang = "panic_fmt"]
-#[no_mangle]
-pub extern "C" fn panic_fmt() -> ! {
-    loop {}
+
+#[panic_implementation]
+fn panic(_info: &PanicInfo) -> ! {
+    loop{}
 }

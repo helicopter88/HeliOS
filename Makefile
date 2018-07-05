@@ -19,16 +19,16 @@ clean:
 	@rm -r build
 
 run: $(iso)
-	@qemu-system-x86_64 -cdrom $(iso)
+	qemu-system-x86_64 -cdrom $(iso)
 
 iso: $(iso)
 
 $(iso): $(kernel) $(grub_cfg)
 	@mkdir -p build/isofiles/boot/grub
 	@cp $(kernel) build/isofiles/boot/kernel.bin
-	@cp $(grub_cfg) build/isofiles/boot/grub
-	@grub-mkrescue /usr/lib/grub/i386-pc -o $(iso) build/isofiles 2> /dev/null
-	@rm -r build/isofiles
+	cp $(grub_cfg) build/isofiles/boot/grub
+	grub2-mkrescue /usr/lib/grub/i386-pc -o $(iso) build/isofiles 2> /dev/null
+	rm -r build/isofiles
 
 
 $(kernel): cargo $(rust_os) $(assembly_object_files) $(linker_script)
