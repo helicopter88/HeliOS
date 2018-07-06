@@ -5,6 +5,7 @@ section .text
 bits 32
 start:
     mov esp, stack_top
+    mov edi, ebx; Move multiboot to the top of the stack
     ; print `OK` to screen
     call check_multiboot
     call check_cpuid
@@ -175,5 +176,5 @@ p3_table:
 p2_table:
     resb 4096
 stack_bottom:
-    resb 4096
+    resb 65536
 stack_top:
