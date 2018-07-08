@@ -1,55 +1,71 @@
 #![feature(lang_items)]
 #![feature(panic_implementation)]
 #![feature(ptr_internals)]
+#![feature(alloc)]
 
 /* Disable stdlib */
 #![no_std]
 #![feature(unique)]
 #![feature(const_fn)]
+#![feature(allocator_api)]
+
+#[macro_use]
+extern crate alloc;
+#[macro_use]
+extern crate bitflags;
 extern crate multiboot2;
 extern crate rlibc;
 extern crate spin;
 extern crate volatile;
+extern crate x86_64;
+
 
 use core::panic::PanicInfo;
+use memory::FrameAllocator;
+use memory::allocator::GlobalBumpAllocator;
+use multiboot2::BootInformation;
+use multiboot2::MemoryMapTag;
 
 #[macro_use]
 mod vga_buffer;
+mod memory;
+
+pub const HEAP_START: usize = 0o_000_001_000_000_0000;
+pub const HEAP_SIZE: usize = 1024 * 100 * 1024; // 100 KiB
+
+#[global_allocator]
+static HEAP_ALLOCATOR: GlobalBumpAllocator = GlobalBumpAllocator::new(HEAP_START,
+                                                          HEAP_START + HEAP_SIZE);
+fn enable_nxe_bit() {
+    use x86_64::registers::msr::{IA32_EFER, rdmsr, wrmsr};
+
+    let nxe_bit = 1 << 11;
+    unsafe {
+        let efer = rdmsr(IA32_EFER);
+        wrmsr(IA32_EFER, efer | nxe_bit);
+    }
+}
+
+fn enable_write_protect_bit() {
+    use x86_64::registers::control_regs::{cr0, cr0_write, Cr0};
+
+    unsafe { cr0_write(cr0() | Cr0::WRITE_PROTECT) };
+}
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_information_address: usize) {
     vga_buffer::clear_screen();
     println!("****************************\nWelcome to HeliOS\n**************************** \
               \neven though you cannot really do much for now..\n\n");
-    println!("But good stuff is coming!", );
-    println!("{}", multiboot_information_address);
-
+    println!("But good stuff is coming!");
     let boot_info = unsafe { multiboot2::load(multiboot_information_address) };
-    let memory_map_tag = boot_info.memory_map_tag()
-        .expect("Memory map tag required");
+    enable_nxe_bit();
+    enable_write_protect_bit();
 
-    println!("memory areas:");
-    for area in memory_map_tag.memory_areas() {
-        println!("    start: 0x{:x}, length: 0x{:x}",
-                 area.base_addr, area.length);
-    }
-
-    println!("kernel sections:");
-    let elf_sections = boot_info.elf_sections_tag().expect("Did not find elf section");
-    for section in elf_sections.sections() {
-        println!("    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
-                 section.addr, section.size, section.flags);
-    }
-    let kernel_start = elf_sections.sections().map(|s| s.addr)
-        .min().unwrap();
-    let kernel_end = elf_sections.sections().map(|s| s.addr + s.size)
-        .max().unwrap();
-    let multiboot_start = multiboot_information_address;
-    let multiboot_end = multiboot_start + (boot_info.total_size as usize);
-    println!("Kernel start: 0x{:x}, kernel end: 0x{:x}", kernel_start, kernel_end);
-    println!("Multiboot start: 0x{:x}, multiboot  end: 0x{:x}", multiboot_start, multiboot_end);
+    memory::init(boot_info);
     loop {}
 }
+
 
 #[allow(non_snake_case)]
 #[no_mangle]
@@ -67,4 +83,10 @@ extern "C" fn eh_personality() {}
 fn panic(_info: &PanicInfo) -> ! {
     println!("{}", _info);
     loop {}
+}
+
+#[lang = "oom"]
+#[no_mangle]
+pub fn rust_oom() -> ! {
+    panic!()
 }

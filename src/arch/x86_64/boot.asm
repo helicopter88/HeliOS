@@ -121,6 +121,9 @@ set_up_page_tables:
     or eax, 0b11 ; present + writable
     mov [p3_table], eax
 
+    mov eax, p4_table
+    or eax, 0b11 ; present + writable
+    mov [p4_table + 511 * 8], eax
     mov ecx, 0
 
 .map_p2_table:
@@ -176,5 +179,5 @@ p3_table:
 p2_table:
     resb 4096
 stack_bottom:
-    resb 65536
+    resb 4096
 stack_top:
